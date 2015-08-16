@@ -5,21 +5,86 @@ output:
     keep_md: true
 ---
 
+##Loading and preprocessing the data
+This is a R markdown file. We input activity.csv to data.  
 
-## Loading and preprocessing the data
+```{r, echo = TRUE}
+data <- read.csv("activity.csv")
+data$steps <- as.numeric(data$steps)
+head(data)
+```
+
+We then create a new data frame with total number of steps taken in a day.
+```{r, echo = TRUE}
+dataProcessed <- aggregate(data$steps, by=list(date=data$date), FUN=sum)
+colnames(dataProcessed)<-c("date", "steps")
+dataProcessed$steps <- as.numeric(dataProcessed$steps)
+```
 
 
+##What is mean total number of steps taken per day?
 
-## What is mean total number of steps taken per day?
+We produce a histogram showing the total number of steps taken each day. 
+```{r, echo = TRUE}
+hist(dataProcessed$steps, col = "red", xlab = "Steps taken in a day", main = "Histogram of steps taken in a day")
+mea <- mean(dataProcessed$steps)
+med <- median(dataProcessed$steps)
+```
+
+The mean number of steps taken in a day is `r mea` and the median is `r med`
+
+##What is the average daily activity pattern?
+```{r, echo = TRUE}
+dataUse <- data
+dataUse <- dataUse[complete.cases(dataUse),]
+dataInterval <- aggregate.data.frame(dataUse$steps, by=list(dataUse$interval), FUN=mean)
+colnames(dataInterval)<-c("interval", "mean_interval_steps")
+plot(dataInterval$interval, dataInterval$mean_interval_steps, type = "l", ylab = "Steps", xlab = "Interval")
+maxInterval <- dataInterval[which.max(dataInterval$mean_interval_steps), 1]
+```
+
+The Interval with the highest number of steps is `r maxInterval`.
+
+##Imputing missing values
+Calculate number of NAs.
+```{r, echo = TRUE}
+sum(is.na(data$steps))
+```
+
+Create a new data frame with NAs replaced with interval's mean and plot.
+```{r, echo = TRUE}
+dataNAremove <- data
+dataNAremove <- merge(dataNAremove, dataInterval, by = "interval")
+dataNAremove$steps[ is.na(dataNAremove$steps) ] <- dataNAremove$mean_interval_steps
+head(dataNAremove)
+dataProcessed2 <- aggregate(dataNAremove$steps, by=list(date=dataNAremove$date), FUN=sum)
+colnames(dataProcessed2)<-c("date", "steps")
+dataProcessed2$steps <- as.numeric(dataProcessed2$steps)
+hist(dataProcessed2$steps, col = "red", xlab = "Steps taken in a day", main = "Histogram of steps taken in a day")
+mea <- mean(dataProcessed2$steps)
+med <- median(dataProcessed2$steps)
+```
+
+There is very little difference between histograms.  
+The new mean number of steps taken in a day is `r mea` and the new median is `r med`
 
 
+##Are there differences in activity patterns between weekdays and weekends?
 
-## What is the average daily activity pattern?
+Create factors and plot based on factors.
+```{r, echo = TRUE}
+weekends <- c('Saturday', 'Sunday')
+dataNAremove$date <- as.Date(dataNAremove$date)
+dataNAremove$weekend <- factor((weekdays(dataNAremove$date) %in% weekends), levels=c(TRUE, FALSE), labels=c('weekend', 'weekday'))
+dataWeekday <- subset(dataNAremove, weekend == 'weekday')
+dataWeekend <- subset(dataNAremove, weekend == 'weekend')
+par(mfrow = c(2,1))
+dataInterval <- aggregate.data.frame(dataWeekend$steps, by=list(dataWeekend$interval), FUN=mean)
+colnames(dataInterval)<-c("interval", "mean_interval_steps")
+plot(dataInterval$interval, dataInterval$mean_interval_steps, type = "l", ylab = "Steps", xlab = "Interval", main = "Mean steps over 5-minute intervals on the weekend")
+dataInterval <- aggregate.data.frame(dataWeekday$steps, by=list(dataWeekday$interval), FUN=mean)
+colnames(dataInterval)<-c("interval", "mean_interval_steps")
+plot(dataInterval$interval, dataInterval$mean_interval_steps, type = "l", ylab = "Steps", xlab = "Interval", main = "Mean steps over 5-minute intervals on the weekday")
+```
 
 
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
